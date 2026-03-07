@@ -1,0 +1,20 @@
+=== VAST.AI OPTIMIZER - QUICK START ===
+
+1. Download all project files to your server (or clone the repo)
+
+2. Navigate to the project directory:
+   cd /path/to/vast-optimizer
+
+3. Run setup (one command):
+   chmod +x setup.sh && ./setup.sh
+
+4. Done! Access dashboard at:
+   http://your-server-ip:5000
+
+To check status:
+   sudo systemctl status vast-optimizer
+
+To view logs:
+   sudo journalctl -u vast-optimizer -f
+
+=== THAT'S IT ===
