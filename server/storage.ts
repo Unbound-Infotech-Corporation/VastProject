@@ -1,38 +1,21 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { optimizationLogs, type InsertOptimizationLog, type OptimizationLog } from "@shared/schema";
+import { desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getLogs(): Promise<OptimizationLog[]>;
+  createLog(log: InsertOptimizationLog): Promise<OptimizationLog>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getLogs(): Promise<OptimizationLog[]> {
+    return await db.select().from(optimizationLogs).orderBy(desc(optimizationLogs.createdAt));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createLog(log: InsertOptimizationLog): Promise<OptimizationLog> {
+    const [inserted] = await db.insert(optimizationLogs).values(log).returning();
+    return inserted;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
