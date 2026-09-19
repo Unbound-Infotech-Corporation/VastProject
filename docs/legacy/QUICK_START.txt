@@ -1,3 +1,4 @@
+OBSOLETE Replit-era notes. Use README.md and scripts/host/bootstrap.sh
 === VAST.AI OPTIMIZER - QUICK START ===
 
 1. Download all project files to your server (or clone the repo)

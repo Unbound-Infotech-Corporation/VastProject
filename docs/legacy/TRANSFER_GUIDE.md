@@ -1,3 +1,5 @@
+> **OBSOLETE (Replit-era).** Do not follow this for a new host. Use the repository README and `scripts/host/bootstrap.sh`.
+
 # How to Transfer Files to Your Server
 
 ## Option 1: Using Git (Recommended if repo is public)
