@@ -1,3 +1,5 @@
+> **OBSOLETE (Replit-era).** Do not follow this for a new host. Use the repository README and `scripts/host/bootstrap.sh`.
+
 # Windows to Ubuntu Server Setup
 
 ## Easiest Method: WinSCP (Recommended)

@@ -1,76 +1,83 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Deploy the optimizer dashboard on the Vast host (Ubuntu 22.04/24.04).
+# Does not wipe disks. Does not install the Vast daemon.
 
-# Vast.AI Optimizer - Automated Deployment Script
-# Run on Ubuntu 22 server
+set -euo pipefail
 
-set -e
-
-echo "================================"
-echo "Vast.AI Optimizer Setup"
-echo "================================"
-
-# Check if running as root for some operations
-if [ "$EUID" -eq 0 ]; then 
-   echo "Some steps need sudo, please run as regular user"
-   exit 1
+if [[ "${EUID}" -eq 0 ]]; then
+  echo "Run as a normal user with sudo, not as root."
+  exit 1
 fi
 
-# Install Node.js
-echo "Installing Node.js 20..."
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+if [[ ! -f package.json ]]; then
+  echo "Run this from the VastProject repository root."
+  exit 1
+fi
 
-# Install PostgreSQL
-echo "Installing PostgreSQL..."
-sudo apt-get install -y postgresql postgresql-contrib
+echo "================================"
+echo "Vast Host Optimizer — dashboard"
+echo "================================"
 
-# Start PostgreSQL
-echo "Starting PostgreSQL..."
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+sudo apt-get update
+if ! command -v node >/dev/null 2>&1; then
+  echo "Installing Node.js 20..."
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
 
-# Create database and user
-echo "Setting up PostgreSQL database..."
-sudo -u postgres psql << EOF
-CREATE USER IF NOT EXISTS vastai_user WITH PASSWORD 'vastai_secure_2024';
-CREATE DATABASE IF NOT EXISTS vastai_optimizer OWNER vastai_user;
-ALTER USER vastai_user CREATEDB;
-EOF
+if ! command -v psql >/dev/null 2>&1; then
+  echo "Installing PostgreSQL..."
+  sudo apt-get install -y postgresql postgresql-contrib
+fi
+sudo systemctl enable --now postgresql
 
-# Navigate to project directory
-PROJECT_DIR="${PWD}"
-echo "Project directory: $PROJECT_DIR"
+PROJECT_DIR="$(pwd)"
+DB_PASS="$(openssl rand -hex 16)"
+API_TOKEN="$(openssl rand -hex 24)"
 
-# Create .env file
-echo "Creating .env file..."
-cat > "$PROJECT_DIR/.env" << EOF
-DATABASE_URL=postgresql://vastai_user:vastai_secure_2024@localhost:5432/vastai_optimizer
+if [[ -f .env ]]; then
+  echo "Keeping existing .env (not overwriting secrets)."
+else
+  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'vastai_user') THEN
+    CREATE ROLE vastai_user LOGIN PASSWORD '${DB_PASS}';
+  END IF;
+END
+\$\$;
+SELECT 'CREATE DATABASE vastai_optimizer OWNER vastai_user'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'vastai_optimizer')\gexec
+ALTER ROLE vastai_user CREATEDB;
+SQL
+
+  cat > .env <<EOF
+DATABASE_URL=postgresql://vastai_user:${DB_PASS}@localhost:5432/vastai_optimizer
 NODE_ENV=production
 PORT=5000
+OPTIMIZER_API_TOKEN=${API_TOKEN}
 EOF
+  chmod 600 .env
+  echo "Wrote .env with a generated DB password and OPTIMIZER_API_TOKEN."
+  echo "Save the token from .env — the dashboard needs it for mutations."
+fi
 
-# Install dependencies
-echo "Installing npm dependencies..."
 npm install
-
-# Setup database
-echo "Setting up database schema..."
+npm run build
 npm run db:push
 
-# Create systemd service
-echo "Creating systemd service..."
-sudo tee /etc/systemd/system/vast-optimizer.service > /dev/null << EOF
+sudo tee /etc/systemd/system/vast-optimizer.service >/dev/null <<EOF
 [Unit]
-Description=Vast.AI Optimizer Dashboard
+Description=Vast Host Optimizer Dashboard
 After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$PROJECT_DIR
-Environment="NODE_ENV=production"
-EnvironmentFile=$PROJECT_DIR/.env
-ExecStart=$(which node) --loader tsx server/index.ts
+User=${USER}
+WorkingDirectory=${PROJECT_DIR}
+Environment=NODE_ENV=production
+EnvironmentFile=${PROJECT_DIR}/.env
+ExecStart=$(command -v node) ${PROJECT_DIR}/dist/index.cjs
 Restart=always
 RestartSec=10
 
@@ -78,17 +85,12 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Enable and start service
-echo "Enabling systemd service..."
 sudo systemctl daemon-reload
 sudo systemctl enable vast-optimizer
-sudo systemctl start vast-optimizer
+sudo systemctl restart vast-optimizer
 
-echo ""
-echo "================================"
-echo "Setup Complete!"
-echo "================================"
-echo "Dashboard available at: http://localhost:5000"
-echo "Check status: sudo systemctl status vast-optimizer"
-echo "View logs: sudo journalctl -u vast-optimizer -f"
-echo "================================"
+echo
+echo "Dashboard: http://$(hostname -I | awk '{print $1}'):5000"
+echo "Status:    sudo systemctl status vast-optimizer"
+echo "Host setup: sudo bash scripts/host/bootstrap.sh"
+echo "Disk wipe is NOT part of this deploy."

@@ -1,9 +1,20 @@
+import { useState } from "react";
 import { HardDrive, Cpu, Container, Network, CheckCircle2, AlertTriangle, ChevronRight, Loader2 } from "lucide-react";
 import { useOptimize } from "@/hooks/use-system";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-type ComponentType = 'Storage' | 'GPU' | 'Docker' | 'Network';
+type ComponentType = "Storage" | "GPU" | "Docker" | "Network";
 
 interface StatusCardProps {
   title: string;
@@ -21,94 +32,114 @@ const icons: Record<ComponentType, React.ElementType> = {
 };
 
 const descriptions: Record<ComponentType, string> = {
-  Storage: "Verifies filesystem mounts, swap space, and NVMe optimization settings.",
-  GPU: "Checks NVIDIA drivers, persistence mode, and PCI-E link speeds.",
-  Docker: "Validates daemon config, runtime settings, and storage driver.",
-  Network: "Optimizes TCP/IP stack, firewall rules, and open ports.",
+  Storage: "Reports Docker mount/XFS/pquota. Will not format disks.",
+  GPU: "Checks NVIDIA drivers and persistence mode (nvidia-smi -pm 1).",
+  Docker: "Validates daemon + nvidia-ctk runtime. Restarts Docker only.",
+  Network: "Reads the installer port range and can open matching UFW rules.",
 };
 
 export function StatusCard({ title, component, verified, message, isLoading = false }: StatusCardProps) {
   const Icon = icons[component];
   const { mutate: optimize, isPending } = useOptimize();
-  const isOptimizing = isPending;
+  const [open, setOpen] = useState(false);
 
   return (
     <div className={cn(
-      "glass-panel glass-panel-hover rounded-xl p-6 relative overflow-hidden group flex flex-col h-full",
-      !verified && "border-warning/30 hover:border-warning/50 shadow-[0_0_15px_rgba(255,204,0,0.05)]"
+      "glass-panel glass-panel-hover group relative flex h-full flex-col overflow-hidden rounded-xl p-6",
+      !verified && "border-warning/30 shadow-[0_0_15px_rgba(255,204,0,0.05)] hover:border-warning/50",
     )}>
-      {/* Decorative background glow based on status */}
       <div className={cn(
-        "absolute -right-20 -top-20 w-40 h-40 blur-[80px] rounded-full opacity-20 pointer-events-none transition-colors duration-500",
-        verified ? "bg-success" : "bg-warning"
+        "pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full opacity-20 blur-[80px] transition-colors duration-500",
+        verified ? "bg-success" : "bg-warning",
       )} />
 
-      <div className="flex justify-between items-start mb-4 relative z-10">
+      <div className="relative z-10 mb-4 flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className={cn(
-            "p-3 rounded-lg border",
-            verified ? "bg-success/10 border-success/20 text-success" : "bg-warning/10 border-warning/20 text-warning"
+            "rounded-lg border p-3",
+            verified ? "border-success/20 bg-success/10 text-success" : "border-warning/20 bg-warning/10 text-warning",
           )}>
-            <Icon className="w-6 h-6" />
+            <Icon className="h-6 w-6" />
           </div>
-          <h3 className="text-xl font-bold text-foreground font-display">{title}</h3>
+          <h3 className="font-display text-xl font-bold text-foreground">{title}</h3>
         </div>
-        
+
         <div className="flex items-center">
           {isLoading ? (
-            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           ) : verified ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 border border-success/20 text-success text-sm font-medium">
-              <CheckCircle2 className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-sm font-medium text-success">
+              <CheckCircle2 className="h-4 w-4" />
               Verified
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning/10 border border-warning/20 text-warning text-sm font-medium">
-              <AlertTriangle className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 rounded-full border border-warning/20 bg-warning/10 px-3 py-1 text-sm font-medium text-warning">
+              <AlertTriangle className="h-4 w-4" />
               Issues Found
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex-grow relative z-10">
-        <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+      <div className="relative z-10 flex-grow">
+        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
           {descriptions[component]}
         </p>
-        
-        <div className="bg-secondary/50 rounded-lg p-3 border border-border/50 font-mono text-xs text-secondary-foreground min-h-[60px] flex items-center">
-          <span className={cn(
-            "inline-block mr-2",
-            verified ? "text-success" : "text-warning"
-          )}>❯</span>
+
+        <div className="flex min-h-[60px] items-center rounded-lg border border-border/50 bg-secondary/50 p-3 font-mono text-xs text-secondary-foreground">
+          <span className={cn("mr-2 inline-block", verified ? "text-success" : "text-warning")}>❯</span>
           <span className="opacity-90">{message}</span>
         </div>
       </div>
 
-      <div className="mt-6 relative z-10">
-        <Button 
+      <div className="relative z-10 mt-6">
+        <Button
           variant={verified ? "outline" : "default"}
           className={cn(
             "w-full justify-between transition-all duration-300",
-            !verified && "bg-primary/90 hover:bg-primary text-primary-foreground shadow-[0_0_15px_rgba(0,240,255,0.2)]",
-            verified && "hover:bg-secondary border-border"
+            !verified && "bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(0,240,255,0.2)] hover:bg-primary",
+            verified && "border-border hover:bg-secondary",
           )}
-          onClick={() => optimize({ component })}
-          disabled={isOptimizing || isLoading}
+          onClick={() => setOpen(true)}
+          disabled={isPending || isLoading}
         >
-          {isOptimizing ? (
+          {isPending ? (
             <span className="flex items-center">
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Running Scripts...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Running allowlisted fix...
             </span>
           ) : (
             <span className="flex items-center font-semibold">
-              {verified ? "Re-verify Component" : "Run Optimization"}
+              {component === "Storage" ? "Re-check storage" : verified ? "Re-run safe fix" : "Run safe optimization"}
             </span>
           )}
-          {!isOptimizing && <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />}
+          {!isPending && <ChevronRight className="h-4 w-4 opacity-50 transition-all group-hover:translate-x-1 group-hover:opacity-100" />}
         </Button>
       </div>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Run {component} allowlisted fix?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This calls scripts/host/optimize-safe.sh only. It will not mkfs, wipe a SuperMicro,
+              or run the Vast installer. Storage is report-only. GPU may enable persistence mode.
+              Docker may restart the daemon. Network may add UFW rules for the existing Vast port range.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                optimize({ component, confirm: true, dryRun: false });
+                setOpen(false);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

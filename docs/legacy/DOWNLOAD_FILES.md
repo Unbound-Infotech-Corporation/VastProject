@@ -1,3 +1,5 @@
+> **OBSOLETE (Replit-era).** Do not follow this for a new host. Use the repository README and `scripts/host/bootstrap.sh`.
+
 # How to Download Files from Replit
 
 ## Quick Method: Download ZIP from Replit

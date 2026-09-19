@@ -1,3 +1,5 @@
+> **OBSOLETE (Replit-era).** Do not follow this for a new host. Use the repository README and `scripts/host/bootstrap.sh`.
+
 # START HERE - Windows User Guide
 
 ## Step 1: Download Project from Replit (2 min)
