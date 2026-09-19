@@ -40,14 +40,17 @@ run_one() {
   fi
 }
 
+exit_code=0
 if [[ "$component" == "All" ]]; then
   for c in Storage GPU Docker Network; do
-    run_one "$c" || true
+    run_one "$c" || exit_code=1
   done
 else
-  run_one "$component"
+  run_one "$component" || exit_code=$?
 fi
 
 if [[ "$json" == "true" ]]; then
-  "${opt_dir}/collect-status.sh"
+  "${opt_dir}/collect-status.sh" || true
 fi
+
+exit "$exit_code"

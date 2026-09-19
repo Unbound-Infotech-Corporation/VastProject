@@ -19,7 +19,11 @@ net.ipv4.tcp_fin_timeout = 30
 net.ipv4.ip_local_port_range = 1024 65000
 EOF
 
-sudo_cmd sysctl --system >/dev/null
+# Apply only this file. `sysctl --system` reloads every drop-in and can fail
+# on unrelated keys (seen in containers: net.core.default_qdisc).
+if ! sudo_cmd sysctl -p "$sysctl_file" >/dev/null; then
+  warn "sysctl -p ${sysctl_file} reported errors; values that applied are still in effect."
+fi
 
 port_file="/var/lib/vastai_kaalia/host_port_range"
 range="${VAST_PORT_RANGE:-}"
