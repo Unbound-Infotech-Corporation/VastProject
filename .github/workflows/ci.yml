@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run check
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Shell syntax
+        run: |
+          set -e
+          while IFS= read -r f; do
+            bash -n "$f"
+          done < <(find scripts -type f \( -name '*.sh' -o -name 'vast-host-setup' \) -print)
+          bash -n deploy.sh setup.sh
+      - name: Status collector smoke
+        run: bash scripts/optimize/collect-status.sh | python3 -c "import json,sys; json.load(sys.stdin)"
