@@ -21,10 +21,10 @@ const icons: Record<ComponentType, React.ElementType> = {
 };
 
 const descriptions: Record<ComponentType, string> = {
-  Storage: "Verifies filesystem mounts, swap space, and NVMe optimization settings.",
-  GPU: "Checks NVIDIA drivers, persistence mode, and PCI-E link speeds.",
-  Docker: "Validates daemon config, runtime settings, and storage driver.",
-  Network: "Optimizes TCP/IP stack, firewall rules, and open ports.",
+  Storage: "XFS + pquota on /var/lib/docker. Never formats a disk from this button.",
+  GPU: "NVIDIA driver presence and persistence mode (nvidia-smi -pm 1).",
+  Docker: "Docker daemon, nvidia-ctk, and nvidia runtime in daemon.json.",
+  Network: "ip_forward, Vast port-range file, and UFW hints — router still required.",
 };
 
 export function StatusCard({ title, component, verified, message, isLoading = false }: StatusCardProps) {

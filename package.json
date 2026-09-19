@@ -1,6 +1,7 @@
 {
-  "name": "rest-express",
-  "version": "1.0.0",
+  "name": "vast-host-setup",
+  "version": "1.1.0",
+  "description": "Vast.ai host bootstrap + optimizer dashboard (Unbound Infotech)",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -8,7 +9,10 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "test": "tsx --test server/hostChecks.test.ts",
+    "db:push": "drizzle-kit push",
+    "host:check": "bash scripts/optimize/collect-status.sh",
+    "host:setup": "bash scripts/vast-host-setup"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -2,6 +2,9 @@ import { useSystemStatus } from "@/hooks/use-system";
 import { Header } from "@/components/Header";
 import { StatusCard } from "@/components/StatusCard";
 import { LogTerminal } from "@/components/LogTerminal";
+import { SafetyBanner } from "@/components/SafetyBanner";
+import { HostReadiness } from "@/components/HostReadiness";
+import { SetupGuide } from "@/components/SetupGuide";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
@@ -17,6 +20,15 @@ export default function Dashboard() {
       <Header />
 
       <main className="relative z-10 space-y-12">
+        <SafetyBanner />
+        {status && (
+          <HostReadiness
+            os={status.os}
+            vast={status.vast}
+            gpu={status.gpu}
+            docker={status.docker}
+          />
+        )}
         {/* Status Grid */}
         <div>
           <div className="flex items-center justify-between mb-6">
@@ -83,6 +95,8 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        <SetupGuide />
 
         {/* Logs Section */}
         <div>

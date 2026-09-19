@@ -1,139 +1,140 @@
-# Vast.AI Server Optimization Dashboard
+# Vast Host Setup
 
-A production-ready web dashboard to monitor and optimize your Ubuntu 22 server settings for Vast.AI verification. Built with React, Node.js, Express, and PostgreSQL.
+Turn an Ubuntu **22.04 / 24.04** box into a [Vast.ai](https://cloud.vast.ai/) GPU host, then keep it rent-ready with real optimizer checks and a dark-terminal dashboard.
 
-## Features
+This is the Unbound Infotech host toolkit, revived from the Replit-era **Vast.AI Server Optimization Dashboard** in this repository (`VastProject`). Work continues **here**, not in the empty [`VastAI`](https://github.com/Unbound-Infotech-Corporation/VastAI) repo — `VastProject` already has the dashboard, scripts, and git history.
 
-✅ **System Status Dashboard** - Real-time status checks for:
-- Storage configuration
-- GPU driver settings  
-- Docker daemon optimization
-- Network settings
+Official Vast docs (do not invent installer flags):
 
-✅ **One-Click Optimization** - Run optimization scripts for individual components or all at once
+- Host setup: https://cloud.vast.ai/host/setup/
+- Hosting overview: https://docs.vast.ai/host/hosting-overview
 
-✅ **Optimization Logs** - Track all optimization runs with timestamps and results
-
-✅ **Dark Mode Terminal UI** - Professional server admin interface
-
-## Quick Start (PuTTY/SSH)
-
-### Step 1: Copy Files to Your Server
-```bash
-# On your Ubuntu 22 server via PuTTY
-mkdir -p /opt/vast-optimizer
-cd /opt/vast-optimizer
-
-# Then copy all project files here (git clone or manual copy)
-```
-
-### Step 2: Run Automated Setup
-```bash
-cd /opt/vast-optimizer
-chmod +x deploy.sh
-./deploy.sh
-```
-
-This automatically installs:
-- Node.js 20
-- PostgreSQL 14
-- Project dependencies
-- Database schema
-- Systemd service for auto-start
-
-### Step 3: Access Dashboard
-```
-http://your-server-ip:5000
-```
-
-## Manual Setup (Alternative)
-
-See `VAST_AI_SETUP.md` for detailed step-by-step instructions.
-
-## Running the App
-
-### Development
-```bash
-npm run dev
-```
-Runs on `http://localhost:5000`
-
-### Production
-```bash
-npm run build
-npm run start
-```
-
-### Using Systemd Service
-```bash
-sudo systemctl status vast-optimizer      # Check status
-sudo systemctl restart vast-optimizer     # Restart
-sudo journalctl -u vast-optimizer -f      # View logs
-```
-
-## Project Structure
+## New machine → rent on Vast
 
 ```
-├── client/                # React frontend (TypeScript + Vite)
-│   ├── src/
-│   │   ├── pages/         # Dashboard page
-│   │   ├── components/    # UI components
-│   │   └── App.tsx        # Main app
-│   └── index.html
-├── server/                # Express backend
-│   ├── routes.ts          # API endpoints
-│   ├── storage.ts         # Database operations
-│   ├── db.ts              # Database connection
-│   └── index.ts           # Server entry
-├── shared/                # Shared types
-│   ├── schema.ts          # Drizzle ORM + Zod types
-│   └── routes.ts          # API contracts
-├── deploy.sh              # Automated setup script
-└── VAST_AI_SETUP.md       # Detailed setup guide
+Ubuntu Server 22.04/24.04
+        ↓
+./scripts/vast-host-setup          # guided CLI (desktop terminal or SSH)
+        ↓
+reboot + nvidia-smi -q
+        ↓
+Dedicated HOST account + key from cloud.vast.ai/host/setup
+        ↓
+./scripts/install-vast-daemon.sh --auth-key YOUR_KEY
+        ↓
+Forward a continuous TCP+UDP port range (3/GPU min, 100/GPU preferred)
+        ↓
+./scripts/optimize/run.sh All --apply
+        ↓
+Machine appears on Vast → list offer → rent
 ```
 
-## API Endpoints
-
-- `GET /api/status` - Get current system status
-- `POST /api/optimize` - Run optimization (body: `{ component: 'Storage'|'GPU'|'Docker'|'Network'|'All' }`)
-- `GET /api/logs` - Get optimization history
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and update:
+Optional dashboard (same dark UI):
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/vastai_optimizer
-NODE_ENV=production
-PORT=5000
+./scripts/install-dashboard.sh
+# http://<this-host>:5000
 ```
 
-## Troubleshooting
+**This cloud agent cannot SSH into C L’s SuperMicro or wipe any physical disk.** Scripts are for you to run on the host.
 
-**Port 5000 already in use?**
+## Safety
+
+**Formatting a disk is never the default.**
+
+- Bootstrap / dashboard / `run.sh --apply` never call `mkfs`.
+- The only wipe path is explicit:
+
+  ```bash
+  ./scripts/optimize/fix-storage.sh --confirm-wipe /dev/DISK
+  ```
+
+  You must type the device path again. The OS disk (`/`, `/boot`, `/home`) is refused. `ASSUME_YES=1` cannot bypass this.
+
+See [docs/SAFETY.md](docs/SAFETY.md).
+
+## Guided install UX
+
+| Surface | Command |
+| --- | --- |
+| CLI menu (primary) | `./scripts/vast-host-setup` or `./setup.sh` |
+| Desktop launcher | `./scripts/install-desktop-launcher.sh` |
+| Dashboard | `./scripts/install-dashboard.sh` or `./deploy.sh` |
+| Headless bootstrap | `./scripts/bootstrap-host.sh` (`--dry-run` to print steps) |
+
+`bootstrap-host.sh` uses only public documented steps:
+
+1. **NVIDIA drivers** — `ubuntu-drivers install --gpgpu`  
+   https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/
+2. **Docker Engine** — Docker’s apt repository  
+   https://docs.docker.com/engine/install/ubuntu/
+3. **NVIDIA Container Toolkit** — NVIDIA apt repo + `nvidia-ctk runtime configure --runtime=docker`  
+   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+Vast’s own installer (from the console) also installs Docker and `nvidia-ctk` if they are missing. Pre-installing them here is optional.
+
+The host daemon is **not** bundled. Copy a fresh authorization key from https://cloud.vast.ai/host/setup/ (expires ~1 hour). This repo only runs the documented shape:
+
 ```bash
-sudo lsof -i :5000
-sudo kill -9 <PID>
+wget https://console.vast.ai/install -O install
+sudo python3 install YOUR_AUTH_KEY --interactive
 ```
 
-**PostgreSQL connection failed?**
+Documented extra flag: `--reset-machine`. Prefer pasting Vast’s copied command if the console text ever changes. Details: [docs/VAST_REGISTRATION.md](docs/VAST_REGISTRATION.md). OS partition layout: [docs/HOST_INSTALL.md](docs/HOST_INSTALL.md).
+
+## npm scripts (repo builds)
+
 ```bash
-sudo systemctl status postgresql
-sudo systemctl restart postgresql
+npm install          # dependencies
+npm run dev          # dashboard + API on :5000 (Vite, no Postgres required)
+npm run build        # client → dist/public + server → dist/index.cjs
+npm start            # NODE_ENV=production node dist/index.cjs
+npm run check        # tsc --noEmit
+npm test             # status JSON unit tests
+npm run db:push      # drizzle schema (needs DATABASE_URL)
+npm run host:check   # bash scripts/optimize/collect-status.sh
+npm run host:setup   # guided CLI
 ```
 
-**Service won't start?**
-```bash
-sudo journalctl -u vast-optimizer -n 50 -e
+Copy `.env.example` to `.env`. `DATABASE_URL` is optional; without it, optimization logs stay in memory.
+
+## Optimizer APIs
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/api/health` | liveness, storage backend, optimize flag |
+| `GET` | `/api/status` | live host checks (storage / GPU / Docker / network / OS / Vast daemon) |
+| `POST` | `/api/optimize` | `{ "component": "Storage"\|"GPU"\|"Docker"\|"Network"\|"All" }` |
+| `GET` | `/api/logs` | recent runs |
+
+`POST /api/optimize` is off until `ALLOW_OPTIMIZE=true`. It is localhost-only unless `ALLOW_REMOTE_OPTIMIZE=true` or `OPTIMIZE_TOKEN` is set. Rate-limited. Storage “optimize” from the API **never** wipes disks.
+
+What each check expects (Vast host practice):
+
+- **Storage** — `/var/lib/docker` on **XFS** with **pquota** / **prjquota**
+- **GPU** — `nvidia-smi` works; persistence mode enabled
+- **Docker** — daemon up; `nvidia-ctk` present; nvidia runtime in `daemon.json`
+- **Network** — `ip_forward=1`; Vast port-range file if the daemon has been installed
+- **Vast** — `vastai.service` active and `/var/lib/vastai_kaalia/api_key` present
+
+## Project layout
+
+```
+scripts/vast-host-setup      Guided CLI
+scripts/bootstrap-host.sh    Ubuntu + drivers + Docker + nvidia-ctk
+scripts/install-vast-daemon.sh
+scripts/install-dashboard.sh
+scripts/optimize/            Real checks + safe fixes
+client/                      React dark-terminal dashboard
+server/                      Express API
+shared/                      Zod contracts + Drizzle schema
+docs/                        Host install, safety, Vast registration
+docs/legacy/                 Stale Replit / WinSCP transfer notes
 ```
 
-## Technology Stack
+## What was revived vs rewritten
 
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Node.js, Express 5, TypeScript
-- **Database**: PostgreSQL, Drizzle ORM
-- **Validation**: Zod
-- **Styling**: Dark mode terminal theme
+See [docs/AUDIT.md](docs/AUDIT.md). Short version: the React/Express dashboard UI was kept; simulated “always fail / fake success” optimizer APIs were replaced with real host scripts; deploy/setup no longer hard-code a DB password or start production via `tsx`; Replit/Windows zip-transfer docs were archived.
 
 ## License
 
