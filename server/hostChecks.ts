@@ -127,7 +127,7 @@ export async function runOptimization(
     throw new Error(`Missing ${script}`);
   }
 
-  const args = [component];
+  const args: string[] = [component];
   if (apply) {
     args.push("--apply");
   }
